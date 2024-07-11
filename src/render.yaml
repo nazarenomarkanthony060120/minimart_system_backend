@@ -1,0 +1,84 @@
+#################################################################
+# Example render.yaml                                           #
+# Do not use this file directly! Consult it for reference only. #
+#################################################################
+
+# List all services *except* PostgreSQL databases here
+services:
+  # A web service on the Ruby native runtime
+  - type: web
+    runtime: ruby
+    name: sinatra-app
+    repo: https://github.com/nazarenomarkanthony060120/minimart_system_backend # Default: Repo containing render.yaml
+    numInstances: 1   # Manual scaling configuration. Default: 1 for new services
+    region: oregon # Default: oregon
+    plan: free    # Default: starter
+    branch: master      # Default: master
+    buildCommand: bundle install
+    preDeployCommand: bundle exec ruby migrate.rb
+    startCommand: bundle exec ruby main.rb
+    autoDeploy: false # Disable automatic deploys
+    maxShutdownDelaySeconds: 120 # Increase graceful shutdown period. Default: 30, Max: 300
+    domains: # Custom domains
+      - https://minimart-system-nec5.vercel.app/
+  # A web service that builds from a Dockerfile
+  - type: web
+    runtime: docker
+    name: webdis
+    repo: https://github.com/nazarenomarkanthony060120/minimart_system_backend.git # Default: Repo containing render.yaml
+    rootDir: webdis # Default: Repo root
+    dockerCommand: ./webdis.sh # Default: Dockerfile CMD
+    scaling: # Autoscaling configuration
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 60 # Optional if targetCPUPercent is set
+      targetCPUPercent: 60    # Optional if targetMemory is set
+    healthCheckPath: /
+    registryCredential: # Default: No credential
+      fromRegistryCreds:
+        name: my-credentials
+    envVars:
+      - key: REDIS_HOST
+        fromService: # Reference a property from another service (see available properties below)
+          type: redis
+          name: lightning
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: lightning
+          property: port
+      - fromGroup: conc-settings
+
+  # A static site
+  - type: web
+    name: my-blog
+    runtime: static
+    buildCommand: yarn build
+    staticPublishPath: ./build
+    pullRequestPreviewsEnabled: true # Enable service previews
+    buildFilter:
+      paths:
+        - src/**/*.js
+      ignoredPaths:
+        - src/**/*.test.js
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: sameorigin
+    routes:
+      - type: redirect
+        source: /old
+        destination: /new
+      - type: rewrite
+        source: /a/*
+        destination: /a
+
+  # A Redis instance
+  - type: redis
+    name: lightning
+    ipAllowList: # Required
+      - source: 0.0.0.0/0
+        description: everywhere
+    plan: free # Default: starter
+    maxmemoryPolicy: allkeys-lru # Default: allkeys-lru
