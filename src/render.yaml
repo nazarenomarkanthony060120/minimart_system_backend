@@ -25,7 +25,7 @@ services:
   - type: web
     runtime: docker
     name: webdis
-    repo: https://github.com/nazarenomarkanthony060120/minimart_system_backend.git # Default: Repo containing render.yaml
+    repo: https://github.com/nazarenomarkanthony060120/minimart_system_backend # Default: Repo containing render.yaml
     rootDir: webdis # Default: Repo root
     dockerCommand: ./webdis.sh # Default: Dockerfile CMD
     scaling: # Autoscaling configuration
